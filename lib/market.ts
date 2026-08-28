@@ -8,4 +8,4 @@ export async function calculateMarket(){const syms=["^GSPC","^IXIC","^SOX","EWY"
  const m=round(clamp(score(k5,3)*.25+score(k20,7)*.25+score(dist,3)*.15+score(-vol+1.5,1)*.15+a*.20));
  return{aScore:a,mScore:m,regime:a>=58&&m>=58?"RISK_ON":a<42||m<42?"RISK_OFF":"NEUTRAL",asOf:new Date().toISOString(),inputs:{sp500:r1(sp),nasdaq:r1(nas),sox:r1(sox),ewy:r1(ewy),vix:r1(vix),usdkrw:r1(krw),kospi5:k5,kospi20:k20}};
 }
-export async function yahooStockHistory(symbol:string){return closes(`${symbol}.KS`,"6mo")}
+export async function yahooStockHistory(symbol:string,market:"KS"|"KQ"="KS"){return closes(`${symbol}.${market}`,"6mo")}
