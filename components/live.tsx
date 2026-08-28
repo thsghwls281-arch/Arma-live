@@ -5,6 +5,7 @@ import {DEFAULT_SECTOR_ID,SECTOR_GROUPS,STOCKS} from "@/lib/stocks";
 
 const won=(n:number)=>new Intl.NumberFormat("ko-KR").format(n)+"원";
 const matchStocks=(query:string)=>{const value=query.trim().toLowerCase();if(!value)return[];return STOCKS.filter(stock=>stock.symbol.includes(value)||stock.name.toLowerCase().includes(value)).slice(0,8)};
+const RANKING_CACHE_MS=5*60*1000;
 
 export default function Live(){
  const [mode,setMode]=useState<"single"|"ranking">("single");
@@ -21,7 +22,14 @@ export default function Live(){
  }
  async function runRanking(){
   setRankingBusy(true);setRankingError("");setRanking(null);
-  try{const r=await fetch("/api/ranking",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sectorId})}),j=await r.json();if(!r.ok)throw new Error(j.message);setRanking(j)}catch(e){setRankingError(e instanceof Error?e.message:"랭킹 계산 실패")}finally{setRankingBusy(false)}
+  try{
+   const cacheKey=`arma-live-ranking:${sectorId}`;
+   const saved=sessionStorage.getItem(cacheKey);
+   if(saved){const parsed=JSON.parse(saved);if(Date.now()-parsed.savedAt<RANKING_CACHE_MS){setRanking({...parsed.data,cached:true});return}}
+   const r=await fetch("/api/ranking",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sectorId})}),j=await r.json();
+   if(!r.ok)throw new Error(j.message);
+   sessionStorage.setItem(cacheKey,JSON.stringify({savedAt:Date.now(),data:j}));setRanking(j)
+  }catch(e){setRankingError(e instanceof Error?e.message:"랭킹 계산 실패")}finally{setRankingBusy(false)}
  }
  function changeSector(nextId:string){setSectorId(nextId);setRanking(null);setRankingError("")}
 
