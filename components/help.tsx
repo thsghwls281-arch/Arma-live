@@ -21,10 +21,11 @@ const SCORE_LABELS:Record<string,string>={ARMA:"종합점수(ARMA)",R:"추세(R)
 
 export function HelpTip({code}:{code:string}){
  const [open,setOpen]=useState(false),ref=useRef<HTMLSpanElement>(null),item=SCORE_HELP[code]||{title:code,text:"ARMA 지표 설명입니다."};
+ const compact=code==="SECTOR"||code==="RANKING";
  useEffect(()=>{if(!open)return;const close=(e:PointerEvent)=>{if(ref.current&&!ref.current.contains(e.target as Node))setOpen(false)};document.addEventListener("pointerdown",close);return()=>document.removeEventListener("pointerdown",close)},[open]);
  return <span ref={ref} className="relative ml-1 inline-flex align-middle">
   <button type="button" aria-label={`${code} 설명`} aria-expanded={open} onClick={e=>{e.stopPropagation();setOpen(v=>!v)}} className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 bg-white text-xs font-black text-slate-600 shadow-sm">?</button>
-  {open&&<span role="tooltip" className="fixed inset-x-4 top-1/2 z-[100] w-auto -translate-y-1/2 rounded-2xl border border-slate-200 bg-white p-5 text-left text-slate-900 shadow-2xl md:absolute md:left-1/2 md:right-auto md:top-7 md:w-72 md:-translate-x-1/2 md:translate-y-0"><b className="block text-base text-slate-900">{item.title}</b><span className="mt-2 block text-sm font-medium leading-6 text-slate-600">{item.text}</span><span className="mt-3 block text-[11px] font-bold text-slate-400">물음표를 다시 누르면 닫힙니다.</span></span>}
+  {open&&<span role="tooltip" className={compact?"absolute left-0 top-7 z-[100] w-56 rounded-xl border border-slate-200 bg-white p-3 text-left text-slate-900 shadow-xl":"fixed inset-x-4 top-1/2 z-[100] w-auto -translate-y-1/2 rounded-2xl border border-slate-200 bg-white p-5 text-left text-slate-900 shadow-2xl md:absolute md:left-1/2 md:right-auto md:top-7 md:w-72 md:-translate-x-1/2 md:translate-y-0"}><b className={`block text-slate-900 ${compact?"text-sm":"text-base"}`}>{item.title}</b><span className={`mt-1.5 block font-medium text-slate-600 ${compact?"text-xs leading-5":"text-sm leading-6"}`}>{item.text}</span>{!compact&&<span className="mt-3 block text-[11px] font-bold text-slate-400">물음표를 다시 누르면 닫힙니다.</span>}</span>}
  </span>
 }
 
