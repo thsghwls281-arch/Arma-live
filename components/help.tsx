@@ -10,7 +10,14 @@ export const SCORE_HELP:Record<string,{title:string;text:string}>={
  SLS:{title:"SLS · 섹터강도",text:"해당 종목 또는 섹터가 시장 대비 얼마나 강한 흐름을 보이는지 평가합니다."},
  EIS:{title:"EIS · 이벤트 영향점수",text:"실적·재무·희석·규제·지배구조 등 주요 사건이 주가에 미칠 영향을 0~100으로 평가합니다."},
  Action:{title:"Action · 실행판단",text:"ARMA 점수와 위험·이벤트 상태를 반영한 매수·보유·비중축소·관망 등의 최종 행동 신호입니다."},
+ MARKET:{title:"시장 위험",text:"공식 ARMA의 A-Score와 M-Score 및 위험 Override를 종합해 현재 시장 환경을 색상과 문장으로 표시합니다."},
+ SECTOR:{title:"섹터 순환",text:"공식 종가 스냅샷을 기준으로 자금과 주가 흐름이 강해지는 섹터를 비교합니다."},
+ RANKING:{title:"실시간 순위",text:"KB 현재가를 반영해 등록 후보의 ARMA LIVE 점수를 계산하고 높은 순서로 보여줍니다."},
+ BREADTH:{title:"상승 확산도",text:"섹터 안에서 강한 흐름을 보이는 종목의 비율입니다. 높을수록 상승 흐름이 여러 종목으로 퍼져 있습니다."},
+ ROTATION5D:{title:"5일 섹터 변화",text:"최근 5거래일 동안 섹터 강도가 얼마나 개선되거나 약해졌는지를 나타냅니다."},
 };
+
+const SCORE_LABELS:Record<string,string>={ARMA:"종합점수(ARMA)",R:"추세(R)",AR:"상대가치(AR)",PRS:"위험경고(PRS)",SLS:"섹터강도(SLS)",EIS:"이벤트영향(EIS)",Action:"행동판단(Action)"};
 
 export function HelpTip({code}:{code:string}){
  const [open,setOpen]=useState(false),ref=useRef<HTMLSpanElement>(null),item=SCORE_HELP[code]||{title:code,text:"ARMA 지표 설명입니다."};
@@ -21,14 +28,14 @@ export function HelpTip({code}:{code:string}){
  </span>
 }
 
-export function MetricLabel({code,label}:{code:string;label?:string}){return <span className="inline-flex items-center">{label||code}<HelpTip code={code}/></span>}
+export function MetricLabel({code,label}:{code:string;label?:string}){return <span className="inline-flex items-center">{label||SCORE_LABELS[code]||code}<HelpTip code={code}/></span>}
 
 export function MarketRiskBadge(){
  const [data,setData]=useState<any>(null);
  useEffect(()=>{let active=true;fetch("/api/market-state",{cache:"no-store"}).then(async r=>({ok:r.ok,data:await r.json()})).then(x=>{if(active)setData(x.data)}).catch(()=>{if(active)setData({state:"UNKNOWN",label:"데이터 확인 중",tone:"slate",text:"공식 ARMA 시장 상태 연결을 확인하고 있습니다."})});return()=>{active=false}},[]);
  const d=data||{state:"UNKNOWN",label:"불러오는 중",tone:"slate",text:"공식 ARMA 시장 상태를 불러오고 있습니다."};
  const tone=d.tone==="green"?"bg-emerald-500":d.tone==="yellow"?"bg-amber-400":d.tone==="orange"?"bg-orange-500":d.tone==="red"?"bg-red-600":"bg-slate-400";
- return <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"><div className="flex min-w-0 items-center gap-2"><span className={`h-3 w-3 shrink-0 rounded-full ${tone}`}/><div className="min-w-0"><p className="text-[10px] font-black tracking-widest text-slate-400">MARKET RISK</p><b className="block truncate text-sm text-slate-800">{d.label}</b></div></div><span className="relative"><MarketRiskHelp data={d}/></span></div>
+ return <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"><div className="flex min-w-0 items-center gap-2"><span className={`h-3 w-3 shrink-0 rounded-full ${tone}`}/><div className="min-w-0"><p className="text-[10px] font-black tracking-widest text-slate-400">시장 위험</p><b className="block truncate text-sm text-slate-800">{d.label}</b></div></div><span className="relative"><MarketRiskHelp data={d}/></span></div>
 }
 
 function MarketRiskHelp({data}:{data:any}){
