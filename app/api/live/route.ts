@@ -15,5 +15,5 @@ export async function GET(req:NextRequest){
   const [quote,market,history]=await Promise.all([kbQuote(symbol),calculateMarket(),yahooStockHistory(symbol,stock.market)]);
   if(!quote.price)throw new Error("현재가가 없습니다.");
   return Response.json({ok:true,symbol,...quote,name:quote.name||stock.name,sector:stock.sector,...market,...calculateStock(history,quote.price,market.aScore,market.mScore),live:true,provisional:true},{headers:{"Cache-Control":"no-store"}});
- }catch(e){return Response.json({ok:false,message:e instanceof Error?e.message:"계산 실패"},{status:500})}
+ }catch(e){const message=e instanceof Error?e.message:"계산 실패";const morning=message.includes("Morning Snapshot");return Response.json({ok:false,message,aScore:morning?null:undefined,mScore:morning?null:undefined,marketSource:morning?"ARMA_MORNING":undefined},{status:morning?503:500})}
 }
