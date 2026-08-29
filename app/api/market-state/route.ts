@@ -13,7 +13,7 @@ export async function GET(){
   const official=json.officialRisk;
   if(!official)return NextResponse.json({ok:false,state:"UNKNOWN",label:"데이터 확인 중",tone:"slate",text:"공식 ARMA 시장 스냅샷이 아직 준비되지 않았습니다."},{status:503});
   const risk=official.risk;
-  if(!risk)return NextResponse.json({ok:false,state:"UNKNOWN",label:"데이터 확인 중",tone:"slate",text:"현재 공식 스냅샷에는 Market Risk 상태값이 없어 다음 공식 적재 후 표시됩니다.",tradeDate:official.tradeDate,collectedAt:official.collectedAt},{status:503});
+  if(!risk)return NextResponse.json({ok:true,state:"LATEST_CLOSE",label:"최근 거래일 기준",tone:"slate",text:"당일 A/M은 N/A이며, 나머지 정보는 최근 공식 거래일 데이터를 기준으로 표시합니다.",tradeDate:official.tradeDate,collectedAt:official.collectedAt,aScore:null,mScore:null,fallback:true},{headers:{"Cache-Control":"no-store"}});
   return NextResponse.json({ok:true,...risk,tradeDate:official.tradeDate,collectedAt:official.collectedAt,snapshotMeta:official.snapshotMeta},{headers:{"Cache-Control":"no-store"}});
  }catch(error){
   return NextResponse.json({ok:false,state:"UNKNOWN",label:"데이터 확인 중",tone:"slate",text:"공식 ARMA 시장 상태 연결을 확인하고 있습니다.",message:error instanceof Error?error.message:"Unknown error"},{status:503});

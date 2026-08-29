@@ -69,13 +69,13 @@ export async function POST(req:NextRequest){
   for(const symbol of symbols){
    const stock=STOCK_BY_SYMBOL.get(symbol),input=inputs.get(symbol);
    if(!stock||!input)continue;
-   try{rows.push({symbol,name:input.name||stock.name,sector:stock.sector,price:input.price,changeRate:input.changeRate,volume:input.volume,...calculateStock(input.history,input.price,market.aScore,market.mScore)})}catch{}
+   try{rows.push({symbol,name:input.name||stock.name,sector:stock.sector,price:input.price,changeRate:input.changeRate,volume:input.volume,...calculateStock(input.history,input.price,market.calculationAScore,market.calculationMScore)})}catch{}
   }
   const minimum=isAll?20:5;
   if(rows.length<minimum)throw new Error(`계산 가능한 종목이 ${rows.length}개뿐입니다. 잠시 후 다시 시도하세요.`);
   rows.sort((a,b)=>b.armaScore-a.armaScore||a.prs-b.prs);
 
-  const base={ok:true,asOf:new Date().toISOString(),scope:isAll?"all":"sector",sectorId:isAll?"__all__":sector!.id,sectorName:isAll?"전체 종목":sector!.name,candidateCount:symbols.length,calculatedCount:rows.length,failedCount:symbols.length-rows.length,aScore:market.aScore,mScore:market.mScore,regime:market.regime,marketSource:"ARMA_MORNING",provisional:true};
+  const base={ok:true,asOf:new Date().toISOString(),scope:isAll?"all":"sector",sectorId:isAll?"__all__":sector!.id,sectorName:isAll?"전체 종목":sector!.name,candidateCount:symbols.length,calculatedCount:rows.length,failedCount:symbols.length-rows.length,aScore:market.aScore,mScore:market.mScore,regime:market.regime,marketSource:market.inputs.source,basisDate:market.inputs.tradeDate,fallback:market.fallback,provisional:true};
   const result=isAll?{...base,top20:rows.slice(0,20)}:{...base,top5:rows.slice(0,5)};
   await cache.set(key,result,{ttl:300,tags:["arma-live-ranking",isAll?"arma-live-global":`arma-live-sector:${sector!.id}`],name:isAll?"ARMA LIVE 전체 TOP20":`${sector!.name} LIVE TOP5`});
   return Response.json({...result,cached:false},{headers:{"Cache-Control":"private, no-store"}});
