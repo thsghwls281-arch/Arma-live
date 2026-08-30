@@ -12,7 +12,7 @@ const WATCHLIST_KEY="arma-live-watchlist:v1";
 
 export default function Live(){
  const [mode,setMode]=useState<"live"|"sector"|"watchlist">("live");
- const [q,setQ]=useState("삼성SDI"),[d,setD]=useState<any>(null),[busy,setBusy]=useState(false),[err,setErr]=useState("");
+ const [q,setQ]=useState(""),[d,setD]=useState<any>(null),[busy,setBusy]=useState(false),[err,setErr]=useState("");
  const [sectorId,setSectorId]=useState("__all__"),[ranking,setRanking]=useState<any>(null),[rankingBusy,setRankingBusy]=useState(false),[rankingError,setRankingError]=useState("");
  const [watchlist,setWatchlist]=useState<string[]>([]);
  const singleMatches=useMemo(()=>matchStocks(q),[q]);
