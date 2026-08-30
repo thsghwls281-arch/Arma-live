@@ -60,7 +60,7 @@ export async function POST(req:NextRequest){
 
   const symbols=isAll?STOCKS.map(stock=>stock.symbol):sector!.symbols.slice(0,20);
   const cache=getCache({namespace:"arma-live"});
-  const key=isAll?"global-ranking:v2":`sector-ranking:v3:${sector!.id}`;
+  const key=isAll?"global-ranking:v3":`sector-ranking:v3:${sector!.id}`;
   const cached=await cache.get(key);
   if(cached)return Response.json({...cached as object,cached:true},{headers:{"Cache-Control":"private, no-store"}});
 
@@ -76,7 +76,7 @@ export async function POST(req:NextRequest){
   rows.sort((a,b)=>b.armaScore-a.armaScore||a.prs-b.prs);
 
   const base={ok:true,asOf:new Date().toISOString(),scope:isAll?"all":"sector",sectorId:isAll?"__all__":sector!.id,sectorName:isAll?"전체 종목":sector!.name,candidateCount:symbols.length,calculatedCount:rows.length,failedCount:symbols.length-rows.length,aScore:market.aScore,mScore:market.mScore,regime:market.regime,marketSource:market.inputs.source,basisDate:market.inputs.tradeDate,fallback:market.fallback,provisional:true};
-  const result=isAll?{...base,top20:rows.slice(0,20)}:{...base,top5:rows.slice(0,5)};
+  const result=isAll?{...base,top20:rows.slice(0,20),buyTop10:rows.filter(row=>row.action==="매수").slice(0,10)}:{...base,top5:rows.slice(0,5)};
   await cache.set(key,result,{ttl:300,tags:["arma-live-ranking",isAll?"arma-live-global":`arma-live-sector:${sector!.id}`],name:isAll?"ARMA LIVE 전체 TOP20":`${sector!.name} LIVE TOP5`});
   return Response.json({...result,cached:false},{headers:{"Cache-Control":"private, no-store"}});
  }catch(e){console.error("[ranking]",e);const message=e instanceof Error?e.message:"랭킹 계산 실패";const morning=message.includes("Morning Snapshot");return Response.json({ok:false,message,aScore:morning?null:undefined,mScore:morning?null:undefined,marketSource:morning?"ARMA_MORNING":undefined},{status:morning?503:500})}
