@@ -47,7 +47,7 @@ export default function Live(){
  function changeSector(nextId:string){setSectorId(nextId);setRanking(null);setRankingError("")}
 
  return <main className="mx-auto min-h-screen max-w-5xl px-4 py-8">
-  <header><div className="text-xs font-black tracking-widest text-blue-600">ARMA LIVE · KB 현재가</div><h1 className="mt-2 text-4xl font-black">ARMA LIVE</h1><p className="mt-2 text-sm text-slate-500">KB 현재가 기준 전체 실시간 TOP20과 섹터별 TOP5를 계산합니다.</p><MarketRiskBadge/></header>
+  <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3"><div><div className="text-xs font-black tracking-widest text-blue-600">ARMA LIVE · KB 현재가</div><h1 className="mt-2 text-4xl font-black">ARMA LIVE</h1><p className="mt-2 max-w-xl text-sm text-slate-500">KB 현재가 기준 전체 TOP10·매수 TOP10과 섹터별 TOP5를 계산합니다.</p></div><div className="w-[150px] sm:w-[210px]"><MarketRiskBadge/></div></header>
   <nav className="mt-6 grid grid-cols-3 rounded-2xl bg-slate-200 p-1" aria-label="ARMA LIVE 주요 메뉴"><button className={`rounded-xl px-2 py-3 text-sm font-black ${mode==="live"?"bg-white text-blue-600 shadow-sm":"text-slate-500"}`} onClick={()=>{setMode("live");changeSector("__all__")}}>LIVE</button><button className={`rounded-xl px-2 py-3 text-sm font-black ${mode==="sector"?"bg-white text-blue-600 shadow-sm":"text-slate-500"}`} onClick={()=>setMode("sector")}>SECTOR</button><button className={`rounded-xl px-2 py-3 text-sm font-black ${mode==="watchlist"?"bg-white text-blue-600 shadow-sm":"text-slate-500"}`} onClick={()=>setMode("watchlist")}>관심종목 {watchlist.length?watchlist.length:""}</button></nav>
 
   {mode==="live"?<>
