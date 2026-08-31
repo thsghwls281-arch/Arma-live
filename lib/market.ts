@@ -1,6 +1,6 @@
 import {round} from "./engine";
 
-const OFFICIAL_BASE=(process.env.ARMA_OFFICIAL_URL||"https://arma2-arma9.vercel.app").replace(/\/$/,"");
+const OFFICIAL_BASE="https://arma2-arma9.vercel.app";
 
 async function closes(symbol:string,range="3mo"){
  const u=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=1d`;
