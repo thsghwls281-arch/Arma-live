@@ -7,7 +7,9 @@ async function closes(symbol:string,range="3mo"){
  const r=await fetch(u,{cache:"no-store",headers:{"User-Agent":"Mozilla/5.0"}});
  if(!r.ok)throw new Error(`market data ${symbol}`);
  const j=await r.json(),q=j?.chart?.result?.[0]?.indicators?.quote?.[0]?.close||[];
- return q.map(Number).filter(Number.isFinite);
+ return q
+  .map((value:unknown)=>value==null?null:Number(value))
+  .filter((value:unknown):value is number=>typeof value==="number"&&Number.isFinite(value)&&value>0);
 }
 
 export async function calculateMarket(){
