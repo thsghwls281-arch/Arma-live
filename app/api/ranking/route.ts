@@ -26,7 +26,7 @@ async function getMarket(cache:Cache){
 
 async function getStockInputs(symbols:string[],cache:Cache){
  const inputs=new Map<string,StockInput>();
- const cachedRows=await Promise.all(symbols.map(async symbol=>[symbol,await cache.get(`stock:v1:${symbol}`)] as const));
+ const cachedRows=await Promise.all(symbols.map(async symbol=>[symbol,await cache.get(`stock:v2:${symbol}`)] as const));
  for(const [symbol,value] of cachedRows)if(value)inputs.set(symbol,value as StockInput);
  const missing=symbols.filter(symbol=>!inputs.has(symbol));
  if(!missing.length)return inputs;
@@ -45,7 +45,7 @@ async function getStockInputs(symbols:string[],cache:Cache){
    if(!quote?.price||!history||!stock)return;
    const value:StockInput={name:quote.name||stock.name,price:quote.price,changeRate:quote.changeRate,volume:quote.volume,history};
    inputs.set(symbol,value);
-   await cache.set(`stock:v1:${symbol}`,value,{ttl:300,tags:["arma-live-stock",`arma-live-stock:${symbol}`],name:stock.name});
+   await cache.set(`stock:v2:${symbol}`,value,{ttl:300,tags:["arma-live-stock",`arma-live-stock:${symbol}`],name:stock.name});
   }));
  }
  return inputs;
@@ -65,7 +65,7 @@ export async function POST(req:NextRequest){
   const symbols=isAll?STOCKS.map(stock=>stock.symbol):sector!.symbols;
   if(!isAll&&symbols.length<5)return Response.json({ok:false,message:`${sector!.name}의 LIVE 지원 종목이 ${symbols.length}개뿐입니다.`},{status:503});
   const cache=getCache({namespace:"arma-live"});
-  const key=isAll?"global-ranking:v6":`sector-ranking:v6:${sector!.id}`;
+  const key=isAll?"global-ranking:v7":`sector-ranking:v7:${sector!.id}`;
   const cached=await cache.get(key);
   if(cached)return Response.json({...cached as object,cached:true},{headers:{"Cache-Control":"private, no-store"}});
 
@@ -85,4 +85,3 @@ export async function POST(req:NextRequest){
   await cache.set(key,result,{ttl:300,tags:["arma-live-ranking",isAll?"arma-live-global":`arma-live-sector:${sector!.id}`],name:isAll?"ARMA LIVE 전체 TOP20":`${sector!.name} LIVE TOP5`});
   return Response.json({...result,cached:false},{headers:{"Cache-Control":"private, no-store"}});
  }catch(e){console.error("[ranking]",e);const message=e instanceof Error?e.message:"랭킹 계산 실패";const morning=message.includes("Morning Snapshot");const officialSector=message.includes("Official 섹터")||message.includes("섹터 원장");return Response.json({ok:false,message,aScore:morning?null:undefined,mScore:morning?null:undefined,marketSource:morning?"ARMA_MORNING":undefined},{status:morning||officialSector?503:500})}
-}
