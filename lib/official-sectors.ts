@@ -1,6 +1,6 @@
 import {SECTOR_BY_ID,STOCKS} from "@/lib/stocks";
 
-const OFFICIAL_BASE=(process.env.ARMA_OFFICIAL_URL||"https://arma2-arma9.vercel.app").replace(/\/$/,"");
+const OFFICIAL_BASE="https://arma2-arma9.vercel.app";
 const text=(value:unknown)=>{const normalized=String(value??"").trim();return normalized||null};
 
 export type OfficialSectorStock={symbol:string;name:string;market:string|null;sector:string|null};
