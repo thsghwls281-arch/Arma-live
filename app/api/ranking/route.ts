@@ -16,7 +16,7 @@ type StockInput={name:string;price:number;changeRate:number|null;volume:number|n
 type RankingRow=ReturnType<typeof calculateStock>&{symbol:string;name:string;sector:string|null;price:number;changeRate:number|null;volume:number|null};
 
 async function getMarket(cache:Cache){
- const key="market:official:v2";
+ const key="market:official:v3";
  const cached=await cache.get(key) as Market|undefined;
  if(cached)return cached;
  const market=await calculateMarket();
@@ -65,7 +65,7 @@ export async function POST(req:NextRequest){
   const symbols=isAll?STOCKS.map(stock=>stock.symbol):sector!.symbols;
   if(!isAll&&symbols.length<5)return Response.json({ok:false,message:`${sector!.name}의 LIVE 지원 종목이 ${symbols.length}개뿐입니다.`},{status:503});
   const cache=getCache({namespace:"arma-live"});
-  const key=isAll?"global-ranking:v5":`sector-ranking:v5:${sector!.id}`;
+  const key=isAll?"global-ranking:v6":`sector-ranking:v6:${sector!.id}`;
   const cached=await cache.get(key);
   if(cached)return Response.json({...cached as object,cached:true},{headers:{"Cache-Control":"private, no-store"}});
 
