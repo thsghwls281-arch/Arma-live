@@ -1,6 +1,7 @@
 import {SECTOR_BY_ID,STOCKS} from "@/lib/stocks";
 
 const OFFICIAL_BASE=(process.env.ARMA_OFFICIAL_URL||"https://arma2-arma9.vercel.app").replace(/\/$/,"");
+const text=(value:unknown)=>{const normalized=String(value??"").trim();return normalized||null};
 
 export type OfficialSectorStock={symbol:string;name:string;market:string|null;sector:string|null};
 export type OfficialSectorGroup={id:string;name:string;count:number;symbols:string[]};
@@ -12,7 +13,7 @@ export async function getOfficialSectorMembership():Promise<OfficialSectorMember
  if(!response.ok||!json?.ok)throw new Error(json?.message||"ARMA Official 섹터 원장을 불러오지 못했습니다.");
  const supported=new Set(STOCKS.map(stock=>stock.symbol));
  const stocks:(OfficialSectorStock[])=(Array.isArray(json.stocks)?json.stocks:[])
-  .map((row:any)=>({symbol:String(row.symbol||""),name:String(row.name||""),market:row.market==null?null:String(row.market),sector:row.sector==null?null:String(row.sector)}))
+  .map((row:any)=>({symbol:String(row.symbol||"").trim(),name:String(row.name||"").trim(),market:text(row.market),sector:text(row.sector)}))
   .filter((row:OfficialSectorStock)=>supported.has(row.symbol));
  const bySymbol=new Map(stocks.map(stock=>[stock.symbol,stock] as const));
  const grouped=new Map<string,string[]>();
@@ -23,8 +24,9 @@ export async function getOfficialSectorMembership():Promise<OfficialSectorMember
 }
 
 export function resolveOfficialSectorId(requestedId:string,membership:OfficialSectorMembership){
- if(membership.byId.has(requestedId))return requestedId;
- const legacy=SECTOR_BY_ID.get(requestedId);
+ const normalized=requestedId.trim();
+ if(membership.byId.has(normalized))return normalized;
+ const legacy=SECTOR_BY_ID.get(normalized);
  if(legacy&&membership.byId.has(legacy.name))return legacy.name;
  return null;
 }
