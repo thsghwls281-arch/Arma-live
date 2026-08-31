@@ -54,8 +54,8 @@ async function getStockInputs(symbols:string[],cache:Cache){
 export async function POST(req:NextRequest){
  try{
   const body:any=await req.json().catch(()=>({}));
-  const requested=(Array.isArray(body?.sectorIds)?body.sectorIds:[]).map((value:any)=>String(value)).filter(Boolean);
-  const sectorIds=[...new Set(requested)].slice(0,5);
+  const requested:string[]=(Array.isArray(body?.sectorIds)?body.sectorIds:[]).map((value:any)=>String(value)).filter(Boolean);
+  const sectorIds:string[]=[...new Set<string>(requested)].slice(0,5);
   if(!sectorIds.length)return Response.json({ok:false,message:"계산할 Official 섹터가 없습니다."},{status:400});
 
   const membership=await getOfficialSectorMembership();
@@ -75,7 +75,7 @@ export async function POST(req:NextRequest){
   }
 
   if(missingSectors.length){
-   const symbols=[...new Set(missingSectors.flatMap(sector=>sector.symbols))];
+   const symbols=[...new Set<string>(missingSectors.flatMap(sector=>sector.symbols))];
    const [market,inputs]=await Promise.all([getMarket(cache),getStockInputs(symbols,cache)]);
    for(const sector of missingSectors){
     const rows:RankingRow[]=[];
