@@ -3,7 +3,8 @@ import {NextRequest} from "next/server";
 import {calculateStock} from "@/lib/engine";
 import {kbQuotes} from "@/lib/kb";
 import {calculateMarket,yahooStockHistory} from "@/lib/market";
-import {SECTOR_BY_ID,STOCKS,STOCK_BY_SYMBOL} from "@/lib/stocks";
+import {STOCKS,STOCK_BY_SYMBOL} from "@/lib/stocks";
+import {getOfficialSectorMembership,resolveOfficialSectorId} from "@/lib/official-sectors";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -12,7 +13,7 @@ export const maxDuration=300;
 type Cache=ReturnType<typeof getCache>;
 type Market=Awaited<ReturnType<typeof calculateMarket>>;
 type StockInput={name:string;price:number;changeRate:number|null;volume:number|null;history:number[]};
-type RankingRow=ReturnType<typeof calculateStock>&{symbol:string;name:string;sector:string;price:number;changeRate:number|null;volume:number|null};
+type RankingRow=ReturnType<typeof calculateStock>&{symbol:string;name:string;sector:string|null;price:number;changeRate:number|null;volume:number|null};
 
 async function getMarket(cache:Cache){
  const key="market:official:v2";
@@ -55,29 +56,32 @@ export async function POST(req:NextRequest){
   const body:any=await req.json().catch(()=>({}));
   const requestedId=String(body?.sectorId||"");
   const isAll=requestedId==="__all__";
-  const sector=isAll?null:SECTOR_BY_ID.get(requestedId);
-  if(!isAll&&!sector)return Response.json({ok:false,message:"계산할 범위를 선택하세요."},{status:400});
+  const membership=await getOfficialSectorMembership();
+  const resolvedId=isAll?null:resolveOfficialSectorId(requestedId,membership);
+  const sector=resolvedId?membership.byId.get(resolvedId):null;
+  if(!isAll&&!sector)return Response.json({ok:false,message:"ARMA Official 섹터 원장에서 계산 범위를 찾지 못했습니다."},{status:400});
 
-  const symbols=isAll?STOCKS.map(stock=>stock.symbol):sector!.symbols.slice(0,20);
+  const symbols=isAll?STOCKS.map(stock=>stock.symbol):sector!.symbols;
+  if(!isAll&&symbols.length<5)return Response.json({ok:false,message:`${sector!.name}의 LIVE 지원 종목이 ${symbols.length}개뿐입니다.`},{status:503});
   const cache=getCache({namespace:"arma-live"});
-  const key=isAll?"global-ranking:v3":`sector-ranking:v3:${sector!.id}`;
+  const key=isAll?"global-ranking:v4":`sector-ranking:v4:${sector!.id}`;
   const cached=await cache.get(key);
   if(cached)return Response.json({...cached as object,cached:true},{headers:{"Cache-Control":"private, no-store"}});
 
   const [market,inputs]=await Promise.all([getMarket(cache),getStockInputs(symbols,cache)]);
   const rows:RankingRow[]=[];
   for(const symbol of symbols){
-   const stock=STOCK_BY_SYMBOL.get(symbol),input=inputs.get(symbol);
+   const stock=STOCK_BY_SYMBOL.get(symbol),input=inputs.get(symbol),official=membership.bySymbol.get(symbol);
    if(!stock||!input)continue;
-   try{rows.push({symbol,name:input.name||stock.name,sector:stock.sector,price:input.price,changeRate:input.changeRate,volume:input.volume,...calculateStock(input.history,input.price,market.calculationAScore,market.calculationMScore)})}catch{}
+   try{rows.push({symbol,name:input.name||stock.name,sector:official?.sector??null,price:input.price,changeRate:input.changeRate,volume:input.volume,...calculateStock(input.history,input.price,market.calculationAScore,market.calculationMScore)})}catch{}
   }
   const minimum=isAll?20:5;
   if(rows.length<minimum)throw new Error(`계산 가능한 종목이 ${rows.length}개뿐입니다. 잠시 후 다시 시도하세요.`);
   rows.sort((a,b)=>b.armaScore-a.armaScore||a.prs-b.prs);
 
-  const base={ok:true,asOf:new Date().toISOString(),scope:isAll?"all":"sector",sectorId:isAll?"__all__":sector!.id,sectorName:isAll?"전체 종목":sector!.name,candidateCount:symbols.length,calculatedCount:rows.length,failedCount:symbols.length-rows.length,aScore:market.aScore,mScore:market.mScore,regime:market.regime,marketSource:market.inputs.source,basisDate:market.inputs.tradeDate,fallback:market.fallback,provisional:true};
+  const base={ok:true,asOf:new Date().toISOString(),scope:isAll?"all":"sector",sectorId:isAll?"__all__":sector!.id,sectorName:isAll?"전체 종목":sector!.name,candidateCount:symbols.length,calculatedCount:rows.length,failedCount:symbols.length-rows.length,aScore:market.aScore,mScore:market.mScore,regime:market.regime,marketSource:market.inputs.source,basisDate:market.inputs.tradeDate,fallback:market.fallback,provisional:true,sectorSource:"ARMA_OFFICIAL:arma_stocks.sector"};
   const result=isAll?{...base,top20:rows.slice(0,20),buyTop10:rows.filter(row=>row.action==="매수").slice(0,10)}:{...base,top5:rows.slice(0,5)};
   await cache.set(key,result,{ttl:300,tags:["arma-live-ranking",isAll?"arma-live-global":`arma-live-sector:${sector!.id}`],name:isAll?"ARMA LIVE 전체 TOP20":`${sector!.name} LIVE TOP5`});
   return Response.json({...result,cached:false},{headers:{"Cache-Control":"private, no-store"}});
- }catch(e){console.error("[ranking]",e);const message=e instanceof Error?e.message:"랭킹 계산 실패";const morning=message.includes("Morning Snapshot");return Response.json({ok:false,message,aScore:morning?null:undefined,mScore:morning?null:undefined,marketSource:morning?"ARMA_MORNING":undefined},{status:morning?503:500})}
+ }catch(e){console.error("[ranking]",e);const message=e instanceof Error?e.message:"랭킹 계산 실패";const morning=message.includes("Morning Snapshot");const officialSector=message.includes("Official 섹터");return Response.json({ok:false,message,aScore:morning?null:undefined,mScore:morning?null:undefined,marketSource:morning?"ARMA_MORNING":undefined},{status:morning||officialSector?503:500})}
 }
