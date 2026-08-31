@@ -85,3 +85,4 @@ export async function POST(req:NextRequest){
   await cache.set(key,result,{ttl:300,tags:["arma-live-ranking",isAll?"arma-live-global":`arma-live-sector:${sector!.id}`],name:isAll?"ARMA LIVE 전체 TOP20":`${sector!.name} LIVE TOP5`});
   return Response.json({...result,cached:false},{headers:{"Cache-Control":"private, no-store"}});
  }catch(e){console.error("[ranking]",e);const message=e instanceof Error?e.message:"랭킹 계산 실패";const morning=message.includes("Morning Snapshot");const officialSector=message.includes("Official 섹터")||message.includes("섹터 원장");return Response.json({ok:false,message,aScore:morning?null:undefined,mScore:morning?null:undefined,marketSource:morning?"ARMA_MORNING":undefined},{status:morning||officialSector?503:500})}
+}
