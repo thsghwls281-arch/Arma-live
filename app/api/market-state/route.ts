@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 
-const OFFICIAL_BASE=(process.env.ARMA_OFFICIAL_URL||"https://arma2-arma9.vercel.app").replace(/\/$/,"");
+const OFFICIAL_BASE="https://arma2-arma9.vercel.app";
 
 function stateFromMorning(snapshot:any){
  const a=Number(snapshot?.a_score),m=Number(snapshot?.m_score);
