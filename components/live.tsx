@@ -9,19 +9,16 @@ const won=(n:number)=>new Intl.NumberFormat("ko-KR").format(n)+"원";
 const matchStocks=(query:string)=>{const value=query.trim().toLowerCase();if(!value)return[];return STOCKS.filter(stock=>stock.symbol.includes(value)||stock.name.toLowerCase().includes(value)).slice(0,8)};
 const RANKING_CACHE_MS=5*60*1000;
 const WATCHLIST_KEY="arma-live-watchlist:v1";
-type LiveSectorGroup={id:string;name:string;count:number;symbols:string[]};
 type SectorBySymbol=Record<string,string|null>;
 
 export default function Live(){
  const [mode,setMode]=useState<"live"|"sector"|"watchlist">("live");
  const [q,setQ]=useState(""),[d,setD]=useState<any>(null),[busy,setBusy]=useState(false),[err,setErr]=useState("");
- const [sectorId,setSectorId]=useState("__all__"),[ranking,setRanking]=useState<any>(null),[rankingBusy,setRankingBusy]=useState(false),[rankingError,setRankingError]=useState("");
- const [sectorGroups,setSectorGroups]=useState<LiveSectorGroup[]>([]),[sectorBySymbol,setSectorBySymbol]=useState<SectorBySymbol>({}),[sectorLoadError,setSectorLoadError]=useState("");
+ const [ranking,setRanking]=useState<any>(null),[rankingBusy,setRankingBusy]=useState(false),[rankingError,setRankingError]=useState("");
+ const [sectorBySymbol,setSectorBySymbol]=useState<SectorBySymbol>({});
  const [watchlist,setWatchlist]=useState<string[]>([]);
  const [watchData,setWatchData]=useState<any[]>([]),[watchBusy,setWatchBusy]=useState(false),[watchError,setWatchError]=useState("");
  const singleMatches=useMemo(()=>matchStocks(q),[q]);
- const selectedSector=useMemo(()=>sectorGroups.find(sector=>sector.id===sectorId)||null,[sectorGroups,sectorId]);
- const isAll=sectorId==="__all__";
  const watchedStocks=useMemo(()=>watchlist.map(symbol=>STOCKS.find(stock=>stock.symbol===symbol)).filter(Boolean) as typeof STOCKS,[watchlist]);
 
  useEffect(()=>{try{const saved=localStorage.getItem(WATCHLIST_KEY);if(saved)setWatchlist(JSON.parse(saved))}catch{}},[]);
@@ -32,12 +29,10 @@ export default function Live(){
     const r=await fetch("/api/sector-membership",{cache:"no-store"}),j=await r.json();
     if(!r.ok||!j.ok)throw new Error(j.message||"Official 섹터 원장 조회 실패");
     if(cancelled)return;
-    const groups=(Array.isArray(j.sectors)?j.sectors:[]) as LiveSectorGroup[];
     const map:SectorBySymbol={};
     for(const stock of Array.isArray(j.stocks)?j.stocks:[])map[String(stock.symbol)]=stock.sector==null?null:String(stock.sector);
-    setSectorGroups(groups);setSectorBySymbol(map);setSectorLoadError("");
-    setSectorId(current=>current==="__all__"||groups.some(group=>group.id===current)?current:"__all__");
-   }catch(e){if(!cancelled){setSectorGroups([]);setSectorBySymbol({});setSectorLoadError(e instanceof Error?e.message:"Official 섹터 원장 조회 실패")}}
+    setSectorBySymbol(map);
+   }catch{if(!cancelled)setSectorBySymbol({})}
   }
   loadSectors();return()=>{cancelled=true}
  },[]);
@@ -77,19 +72,18 @@ export default function Live(){
  async function runRanking(){
   setRankingBusy(true);setRankingError("");setRanking(null);
   try{
-   const cacheKey=`arma-live-ranking:v4:${sectorId}`;
+   const cacheKey="arma-live-ranking:v5:__all__";
    const saved=sessionStorage.getItem(cacheKey);
    if(saved){const parsed=JSON.parse(saved);if(Date.now()-parsed.savedAt<RANKING_CACHE_MS){setRanking({...parsed.data,cached:true});return}}
-   const r=await fetch("/api/ranking",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sectorId})}),j=await r.json();
+   const r=await fetch("/api/ranking",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sectorId:"__all__"})}),j=await r.json();
    if(!r.ok)throw new Error(j.message);
    sessionStorage.setItem(cacheKey,JSON.stringify({savedAt:Date.now(),data:j}));setRanking(j)
   }catch(e){setRankingError(e instanceof Error?e.message:"랭킹 계산 실패")}finally{setRankingBusy(false)}
  }
- function changeSector(nextId:string){setSectorId(nextId);setRanking(null);setRankingError("")}
 
  return <main className="mx-auto min-h-screen max-w-5xl px-4 py-8">
-  <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3"><div><div className="text-xs font-black tracking-widest text-blue-600">ARMA LIVE · KB 현재가</div><h1 className="mt-2 text-4xl font-black">ARMA LIVE</h1><p className="mt-2 max-w-xl text-sm text-slate-500">KB 현재가 기준 전체 TOP10·매수 TOP10과 섹터별 TOP5를 계산합니다.</p></div><div className="w-[150px] sm:w-[210px]"><MarketRiskBadge/></div></header>
-  <nav className="mt-6 grid grid-cols-3 rounded-2xl bg-slate-200 p-1" aria-label="ARMA LIVE 주요 메뉴"><button className={`rounded-xl px-2 py-3 text-sm font-black ${mode==="live"?"bg-white text-blue-600 shadow-sm":"text-slate-500"}`} onClick={()=>{setMode("live");changeSector("__all__")}}>LIVE</button><button className={`rounded-xl px-2 py-3 text-sm font-black ${mode==="sector"?"bg-white text-blue-600 shadow-sm":"text-slate-500"}`} onClick={()=>setMode("sector")}>SECTOR</button><button className={`rounded-xl px-2 py-3 text-sm font-black ${mode==="watchlist"?"bg-white text-blue-600 shadow-sm":"text-slate-500"}`} onClick={()=>setMode("watchlist")}>관심종목 {watchlist.length?watchlist.length:""}</button></nav>
+  <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3"><div><div className="text-xs font-black tracking-widest text-blue-600">ARMA LIVE · KB 현재가</div><h1 className="mt-2 text-4xl font-black">ARMA LIVE</h1><p className="mt-2 max-w-xl text-sm text-slate-500">KB 현재가 기준 전체 TOP10·매수 TOP10과 공식 섹터별 LIVE TOP5를 계산합니다.</p></div><div className="w-[150px] sm:w-[210px]"><MarketRiskBadge/></div></header>
+  <nav className="mt-6 grid grid-cols-3 rounded-2xl bg-slate-200 p-1" aria-label="ARMA LIVE 주요 메뉴"><button className={`rounded-xl px-2 py-3 text-sm font-black ${mode==="live"?"bg-white text-blue-600 shadow-sm":"text-slate-500"}`} onClick={()=>setMode("live")}>LIVE</button><button className={`rounded-xl px-2 py-3 text-sm font-black ${mode==="sector"?"bg-white text-blue-600 shadow-sm":"text-slate-500"}`} onClick={()=>setMode("sector")}>SECTOR</button><button className={`rounded-xl px-2 py-3 text-sm font-black ${mode==="watchlist"?"bg-white text-blue-600 shadow-sm":"text-slate-500"}`} onClick={()=>setMode("watchlist")}>관심종목 {watchlist.length?watchlist.length:""}</button></nav>
 
   {mode==="live"?<>
    <section className="relative mt-4"><div className="flex gap-2 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"><input value={q} onChange={e=>setQ(e.target.value)} className="min-w-0 flex-1 rounded-2xl border border-slate-200 px-4 py-3 font-bold outline-none focus:border-blue-500" placeholder="종목명 또는 6자리 코드"/><button onClick={run} disabled={busy} className="rounded-2xl bg-blue-600 px-5 font-black text-white disabled:opacity-50">{busy?"계산 중":"현재가 계산"}</button></div>{q&&!STOCKS.some(stock=>stock.name===q)&&singleMatches.length>0&&<SearchResults stocks={singleMatches} sectors={sectorBySymbol} onSelect={stock=>setQ(stock.name)}/>}</section>
@@ -103,16 +97,7 @@ export default function Live(){
    {rankingError&&<ErrorBox text={rankingError}/>}
    {ranking&&<RankingResult data={ranking} limit={10} watchlist={watchlist} onToggle={toggleWatch} onOpen={symbol=>{const stock=STOCKS.find(item=>item.symbol===symbol);if(stock)openStock(stock)}}/>}
   </>:mode==="sector"?<>
-   <SectorOverview/>
-   <section className="mt-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-    <div className="flex items-center justify-between gap-3"><div><p className="flex items-center text-xs font-black text-blue-600">섹터 LIVE 순위<HelpTip code="RANKING"/></p><h2 className="text-xl font-black">{selectedSector?.name||"Official 섹터 선택"}</h2><p className="mt-1 text-xs font-bold text-slate-400">ARMA Official · arma_stocks.sector 단일 기준{selectedSector?` · 후보 ${selectedSector.count}종목`:""}</p></div><button onClick={runRanking} disabled={rankingBusy||isAll||!selectedSector} className="shrink-0 rounded-2xl bg-blue-600 px-5 py-3 font-black text-white disabled:opacity-50">{rankingBusy?"TOP5 계산 중":"TOP5 계산"}</button></div>
-    {sectorLoadError&&<ErrorBox text={sectorLoadError}/>} 
-    <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-3">{sectorGroups.map(sector=><button key={sector.id} onClick={()=>changeSector(sector.id)} className={`rounded-2xl border px-3 py-3 text-left text-sm font-black transition ${sector.id===sectorId?"border-blue-600 bg-blue-50 text-blue-700":"border-slate-200 text-slate-500 hover:border-blue-300"}`}><span className="block">{sector.name}</span><small className="font-bold opacity-60">LIVE 지원 {sector.count}종목</small></button>)}</div>
-    {!sectorLoadError&&!sectorGroups.length&&<p className="mt-3 text-xs font-bold text-slate-400">Official 섹터 원장을 불러오는 중입니다.</p>}
-    <p className="mt-4 text-xs font-bold text-slate-400">섹터 카드·종목 분류는 Official 단일 원장 · TOP5는 KB 현재가 기준 잠정값 · 결과 5분 캐시</p>
-   </section>
-   {rankingError&&<ErrorBox text={rankingError}/>}
-   {ranking&&<RankingResult data={ranking} limit={5} watchlist={watchlist} onToggle={toggleWatch} onOpen={symbol=>{const stock=STOCKS.find(item=>item.symbol===symbol);if(stock)openStock(stock)}}/>}
+   <SectorOverview onOpen={symbol=>{const stock=STOCKS.find(item=>item.symbol===symbol);if(stock)openStock(stock)}}/>
   </>:<>
    <WatchlistPanel stocks={watchedStocks} rows={watchData} busy={watchBusy} error={watchError} onRemove={toggleWatch} onOpen={symbol=>{const stock=STOCKS.find(item=>item.symbol===symbol);if(stock)openStock(stock)}}/>
   </>}
