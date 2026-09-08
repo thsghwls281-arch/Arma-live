@@ -95,7 +95,7 @@ export function scoreEntry(input:EntryScoreInput){
  }
  const coverage=[Boolean(p),Boolean(o),Boolean(s),Boolean(input.referenceTradePlan),Boolean(input.live)].filter(Boolean).length;
  const confidence=coverage>=5?"HIGH":coverage>=3?"MEDIUM":"LOW";
- const ozawaStatus=o?.timingAction==="EXIT_AVOID"?"EXIT_AVOID":o?.confirmedPrimaryName?`CONFIRMED: ${o.confirmedPrimaryName}`:o?.pendingPrimaryName?`PENDING: ${o.pendingPrimaryName}`:o?`${o.cycleState||"N/A"} / PRICE_CONFIRMATION":"N/A";
+ const ozawaStatus=o?.timingAction==="EXIT_AVOID"?"EXIT_AVOID":o?.confirmedPrimaryName?`CONFIRMED: ${o.confirmedPrimaryName}`:o?.pendingPrimaryName?`PENDING: ${o.pendingPrimaryName}`:o?`${o.cycleState||"N/A"} / PRICE_CONFIRMATION`:"N/A";
  const reasons:string[]=[];
  reasons.push(`${state} setup ${setup}/30${p?.trendQualified?" · trend qualified":""}`);
  reasons.push(`Trigger ${trigger}/15 · ${ozawaStatus}`);
