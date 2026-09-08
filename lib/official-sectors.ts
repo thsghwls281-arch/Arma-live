@@ -1,20 +1,24 @@
-import {SECTOR_BY_ID,STOCKS} from "@/lib/stocks";
+import {SECTOR_BY_ID} from "@/lib/stocks";
 
-const OFFICIAL_BASE="https://arma2-arma9.vercel.app";
+const OFFICIAL_BASE=process.env.ARMA_OFFICIAL_BASE_URL||"https://arma2-arma9.vercel.app";
 const text=(value:unknown)=>{const normalized=String(value??"").trim();return normalized||null};
 
 export type OfficialSectorStock={symbol:string;name:string;market:string|null;sector:string|null};
 export type OfficialSectorGroup={id:string;name:string;count:number;symbols:string[]};
 export type OfficialSectorMembership={source:string;stocks:OfficialSectorStock[];sectors:OfficialSectorGroup[];bySymbol:Map<string,OfficialSectorStock>;byId:Map<string,OfficialSectorGroup>};
 
+export function liveMarketCode(value:string|null|undefined):"KS"|"KQ"{
+ const market=String(value||"").toUpperCase();
+ return market.includes("KOSDAQ")||market==="KQ"?"KQ":"KS";
+}
+
 export async function getOfficialSectorMembership():Promise<OfficialSectorMembership>{
  const response=await fetch(`${OFFICIAL_BASE}/api/arma/stock-sectors`,{cache:"no-store"});
  const json:any=await response.json().catch(()=>null);
  if(!response.ok||!json?.ok)throw new Error(json?.message||"ARMA Official 섹터 원장을 불러오지 못했습니다.");
- const supported=new Set(STOCKS.map(stock=>stock.symbol));
  const stocks:(OfficialSectorStock[])=(Array.isArray(json.stocks)?json.stocks:[])
   .map((row:any)=>({symbol:String(row.symbol||"").trim(),name:String(row.name||"").trim(),market:text(row.market),sector:text(row.sector)}))
-  .filter((row:OfficialSectorStock)=>supported.has(row.symbol));
+  .filter((row:OfficialSectorStock)=>/^\d{6}$/.test(row.symbol));
  const bySymbol=new Map(stocks.map(stock=>[stock.symbol,stock] as const));
  const grouped=new Map<string,string[]>();
  for(const stock of stocks){if(!stock.sector)continue;const symbols=grouped.get(stock.sector)||[];symbols.push(stock.symbol);grouped.set(stock.sector,symbols)}
