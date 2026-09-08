@@ -74,7 +74,7 @@ export function scoreEntry(input:EntryScoreInput){
  const hardGates:string[]=[];
  const state=String(p?.state||"NOT_COMPUTABLE");
  const eventNegative=String(official.eventOverride||"").toUpperCase()==="ON"&&String(official.eventDirection||"").toUpperCase()==="NEGATIVE";
- const fallingKnife=Boolean(p)&&!p.trendQualified&&!p.confirmationQualified&&n(p.drawdownAtr)<0?-n(p.drawdownAtr)>=2.5:n(p?.drawdownAtr)>=2.5;
+ const fallingKnife=Boolean(p)&&!p.trendQualified&&!p.confirmationQualified&&Math.abs(n(p.drawdownAtr))>=2.5;
  if(eventNegative)hardGates.push("NEGATIVE_EVENT_OVERRIDE");
  if(live.prs>=85)hardGates.push("PRS_85_PLUS");
  if(live.armaScore<45&&live.rScore<45)hardGates.push("LOW_ARMA_AND_R");
